@@ -1,9 +1,10 @@
 import os
+import secrets
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
-from nicegui import app as nicegui_app, ui
+from nicegui import ui
 import uvicorn
 
 from app.api import create_api_router
@@ -31,12 +32,15 @@ def create_app(database_path: str | None = None, seed: bool = True) -> FastAPI:
         return {"status": "ok"}
 
     mount_ui(repository)
-    ui.run_with(app, title="Ticketing System", favicon="T", storage_secret=os.getenv("NICEGUI_SECRET", "dev-secret"))
+    # Use environment variable for storage secret, or generate a secure random one
+    storage_secret = os.getenv("NICEGUI_SECRET", secrets.token_urlsafe(32))
+    ui.run_with(app, title="Ticketing System", favicon="T", storage_secret=storage_secret)
     return app
 
 
-app = create_app()
-
-
 if __name__ in {"__main__", "__mp_main__"}:
+    app = create_app()
     uvicorn.run(app, host="127.0.0.1", port=int(os.getenv("PORT", "8000")))
+else:
+    # For imports, don't create the global app to avoid locking the database during testing
+    app = None

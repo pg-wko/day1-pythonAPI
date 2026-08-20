@@ -7,23 +7,8 @@ from app.models import Ticket, TicketCreate, TicketPriority, TicketStatus, Ticke
 def mount_ui(repository: TicketRepository) -> None:
     @ui.page("/")
     def ticket_dashboard() -> None:
-        tickets_container = ui.column().classes("w-full gap-3")
-        status_filter = ui.select(
-            ["all", *[status.value for status in TicketStatus]],
-            value="all",
-            label="Status",
-        ).classes("w-44")
-        priority_filter = ui.select(
-            ["all", *[priority.value for priority in TicketPriority]],
-            value="all",
-            label="Priority",
-        ).classes("w-44")
-        search = ui.input("Search").props("clearable").classes("w-72")
-
         def current_tickets() -> list[Ticket]:
-            return repository.list(
-                filters=_filters() if status_filter.value == priority_filter.value == "all" and not search.value else None
-            )
+            return repository.list(filters=_filters())
 
         def _filters():
             from app.models import TicketFilters
@@ -79,10 +64,18 @@ def mount_ui(repository: TicketRepository) -> None:
                             on_change=lambda event, ticket_id=ticket.id: update_status(ticket_id, event.value),
                         ).classes("w-full")
                         ui.label(f"Priority: {ticket.priority.value}").classes("text-sm font-medium uppercase text-gray-500")
+                        ui.button("Delete", on_click=lambda ticket_id=ticket.id: delete_ticket(ticket_id)).props(
+                            "flat color=negative dense"
+                        )
 
         def update_status(ticket_id: int, status_value: str) -> None:
             repository.update(ticket_id, TicketUpdate(status=TicketStatus(status_value)))
             ui.notify("Ticket updated", color="positive")
+            refresh()
+
+        def delete_ticket(ticket_id: int) -> None:
+            repository.delete(ticket_id)
+            ui.notify("Ticket deleted", color="warning")
             refresh()
 
         ui.add_head_html(
@@ -115,8 +108,20 @@ def mount_ui(repository: TicketRepository) -> None:
                 ui.button("Create ticket", on_click=create_ticket).props("color=primary")
 
             with ui.row().classes("w-full items-center gap-3"):
-                status_filter.on("update:model-value", lambda _: refresh())
-                priority_filter.on("update:model-value", lambda _: refresh())
-                search.on("update:model-value", lambda _: refresh())
+                status_filter = ui.select(
+                    ["all", *[status.value for status in TicketStatus]],
+                    value="all",
+                    label="Status",
+                    on_change=lambda _: refresh(),
+                ).classes("w-44")
+                priority_filter = ui.select(
+                    ["all", *[priority.value for priority in TicketPriority]],
+                    value="all",
+                    label="Priority",
+                    on_change=lambda _: refresh(),
+                ).classes("w-44")
+                search = ui.input("Search", on_change=lambda _: refresh()).props("clearable").classes("w-72")
+
+            tickets_container = ui.column().classes("w-full gap-3")
 
             refresh()

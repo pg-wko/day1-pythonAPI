@@ -90,8 +90,6 @@ def mount_ui(repository: TicketRepository) -> None:
             <style>
                 body { background: #f7f5ef; }
                 .nicegui-content { max-width: 1180px; margin: 0 auto; }
-                .q-btn { display: none !important; }
-                .q-field { transform: rotate(1deg); }
             </style>
             """
         )
